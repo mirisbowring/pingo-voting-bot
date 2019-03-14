@@ -1,5 +1,57 @@
 #!/bin/bash
 
+####################################################################
+# Verifies the existance of an variable and whether it is an integer
+# Globals:
+#   None
+# Arguments:
+#   local variable to verify
+# Returns:
+#   0 - does not exist or is not an int
+#   1 - is an int
+####################################################################
+integer()
+{
+    if [[ ! -z "$1" ]] && [ $1 -eq $1 2> /dev/null ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+_create_worker(){
+    for id in $(seq $1); do
+        echo "Creating worker $id."
+        if [[ "$id" -eq "$1" ]] && [[ ! -z $3 ]]; then
+            bash start.sh -v $3 -o $OPTION -n "worker-$id" $URL &
+            echo special
+        else
+            bash start.sh -v $2 -o $OPTION -n "worker-$id" $URL &
+        fi
+    done
+}
+
+create_worker()
+{
+    # Verify that the var exist and is a number
+    if integer "$WORKER" ; then
+        # Calculate how many votes a worker should send
+        subvotes=$(($VOTES/$WORKER))
+        rest=$(($VOTES%$WORKER))
+        if [[ "$subvotes" -eq "0" ]]; then
+            _create_worker $VOTES 1
+        elif [[ "$rest" -gt "0" ]]; then
+            _create_worker $WORKER $subvotes $rest
+        else
+            _create_worker $WORKER $subvotes
+        fi
+    fi
+    echo "${GREEN}Created worker!${RESET}" style
+    wait
+    echo "EXITING MASTER"
+    exit 0
+}
+
 #########################################################
 # Reimplements the echo command
 # Globals:
@@ -11,9 +63,11 @@
 #########################################################
 echo()
 {
+    # Printing worker name if set
     if [[ ! -z "$NAME" ]]; then
         builtin echo -n "<$NAME>"
     fi
+    # Printing styled if set
     if [[ $2 -eq "style" ]]; then
         builtin echo -e "$1"
     else
@@ -176,13 +230,10 @@ if [[ -z "$URL" ]]; then
     exit 1
 fi
 
-### Checks whether the script should work async
-if [[ $WORKER -eq "" ]]; then
-    echo "Preparing the async work."
-
+if [[ ! -z "$NAME" ]]; then
+    mkdir "$NAME"
+    cd "$NAME"
 fi
-
-
 
 ### Starting script
 echo "Getting survey from $URL."
@@ -195,30 +246,35 @@ echo "Extracting options."
 load_survey
 
 ### Exit if no option was found
-echo "Found ${#OPTIONS[@]} options."
 if [[ ${#OPTIONS[@]} -eq 0 ]]; then
-    echo "${RED}No voting options available" style
+    echo "${RED}No voting options available!${RESET}" style
     exit 0
 fi
 
 ### Ask the user if no voting option has been passed as command line argument
 if [[ "$OPTION" -eq "" ]]; then
+    echo "Found ${#OPTIONS[@]} options."
     echo "On which option do you want to vote for? (choose an int)"
     read OPTION
 fi
-
-### Replaces the option number with the generic option id
-OPTION="${OPTIONS[$((OPTION-1))]}"
 
 ### Ask the user if no vote amount has been passed as command line argument
 if [[ "$VOTES" -eq "" ]]; then
     echo "How many votes do you want to place?"
     read VOTES
 fi
-echo $VOTES
-echo $OPTION
+
+### Check whether the script should work async
+if [[ ! -z $WORKER ]]; then
+    echo "Preparing the async work."
+    create_worker
+fi
+
 ### Notify the user that the script is about to start
-echo -e "${BROWN}Start voting $VOTES times for option $OPTION on $URL."
+echo "${BROWN}Start voting $VOTES times for option $OPTION on $URL.${RESET}" style
+
+### Replaces the option number with the generic option id
+OPTION="${OPTIONS[$((OPTION-1))]}"
 
 ### Iterate through the votes
 for run in $(seq $VOTES); do
@@ -227,7 +283,7 @@ for run in $(seq $VOTES); do
 
     # Notify the user about the Progress (does not validate the success of the
     # vote)
-    echo -e "${GREEN}Voted $run has been placed.${RESET}"
+    echo "${GREEN}Voted $run has been placed.${RESET}" style
 
     # Refresh the survey auth token if this is not the last round
     if [[ $run -ne $VOTES ]]; then
@@ -235,3 +291,11 @@ for run in $(seq $VOTES); do
         load_survey
     fi
 done
+
+if [[ ! -z "$NAME" ]]; then
+    cd ..
+    rm -r "$NAME"
+fi
+
+echo 
+echo "${GREEN}DONE!${RESET}" style
