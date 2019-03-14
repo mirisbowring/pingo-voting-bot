@@ -1,6 +1,27 @@
 #!/bin/bash
 
 #########################################################
+# Reimplements the echo command
+# Globals:
+#   NAME
+# Arguments:
+#   None
+# Returns:
+#   None
+#########################################################
+echo()
+{
+    if [[ ! -z "$NAME" ]]; then
+        builtin echo -n "<$NAME>"
+    fi
+    if [[ $2 -eq "style" ]]; then
+        builtin echo -e "$1"
+    else
+        builtin echo "$1"
+    fi
+}
+
+#########################################################
 # Receives a session cookie and the ETag from the Website
 # Globals:
 #   SESSION_COOKIE
@@ -103,8 +124,7 @@ print_help()
 
 
 POSITIONAL=()
-while [[ $# -gt 0 ]]
-do
+while [[ $# -gt 0 ]]; do
     key="$1"
 
     case $key in
@@ -150,6 +170,20 @@ RESET='\033[0m'
 declare -a OPTIONS
 declare -a CONFIG
 
+### Verifies that a URL has been specified
+if [[ -z "$URL" ]]; then
+    echo "You must specify an Survey URL"
+    exit 1
+fi
+
+### Checks whether the script should work async
+if [[ $WORKER -eq "" ]]; then
+    echo "Preparing the async work."
+
+fi
+
+
+
 ### Starting script
 echo "Getting survey from $URL."
 
@@ -163,7 +197,7 @@ load_survey
 ### Exit if no option was found
 echo "Found ${#OPTIONS[@]} options."
 if [[ ${#OPTIONS[@]} -eq 0 ]]; then
-    echo -e "${RED}No voting options available"
+    echo "${RED}No voting options available" style
     exit 0
 fi
 
