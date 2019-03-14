@@ -1,48 +1,31 @@
 #!/bin/bash
 
-POSITIONAL=()
-while [[ $# -gt 0 ]]
-do
-    key="$1"
+#########################################################
+# Receives a session cookie and the ETag from the Website
+# Globals:
+#   SESSION_COOKIE
+#   ETAG
+# Arguments:
+#   None
+# Returns:
+#   None
+#########################################################
+get_session_cookie()
+{
+    # Getting the Header
+    curl -s 'https://pingo.coactum.de/707759' -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' -H 'Accept-Language: en-US,en;q=0.5' --compressed -H 'Referer: https://pingo.coactum.de/707759' -H 'Connection: keep-alive' -H 'Upgrade-Insecure-Requests: 1' -H 'Cache-Control: max-age=0' -I -o header.pingo > /dev/null
 
-    case $key in
-        -v|--votes)
-        VOTES="$2"
-        shift 2
-        ;;
-        -o|--option)
-        OPTION="$2"
-        shift 2
-        ;;
-        -w|--worker)
-        WORKER="$2"
-        shift 2
-        ;;
-        -n|--name)
-        NAME="$2"
-        shift 2
-        ;;
-        *)    # unknown option
-        POSITIONAL+=("$1") # save it in an array for later
-        shift # past argument
-        ;;
-    esac
-done
-set -- "${POSITIONAL[@]}" # restore positional parameters
+    # Extracting the session cookie
+    SESSION_COOKIE="$(cat header.pingo | tr -d '\r' | sed -En 's/^Set-Cookie: (.*);.*;.*$/\1/p')"
+    SESSION_COOKIE="${SESSION_COOKIE}"
 
-URL=$1
+    # Extracting the ETag
+    ETAG="$(cat header.pingo | tr -d '\r' | sed -En 's/^ETag: (.*)/\1/p')"
+    ETAG="${ETAG}"
 
-# Output colors
-BROWN='\033[0;33m'
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-RESET='\033[0m'
-
-## Config file
-## line#1 ~ id
-## line#2 ~ authenticity_token
-declare -a OPTIONS
-declare -a CONFIG
+    # Removing tmp file
+    rm header.pingo
+}
 
 #################################################################
 # loading survey informations from website
@@ -91,32 +74,81 @@ load_survey()
     CONFIG[1]="${parsed_url}"
 }
 
-#########################################################
-# Receives a session cookie and the ETag from the Website
+#################################################################
+# Prints the help page
 # Globals:
-#   SESSION_COOKIE
-#   ETAG
+#   None
 # Arguments:
 #   None
 # Returns:
 #   None
-#########################################################
-get_session_cookie()
+#################################################################
+print_help()
 {
-    # Getting the Header
-    curl -s 'https://pingo.coactum.de/707759' -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' -H 'Accept-Language: en-US,en;q=0.5' --compressed -H 'Referer: https://pingo.coactum.de/707759' -H 'Connection: keep-alive' -H 'Upgrade-Insecure-Requests: 1' -H 'Cache-Control: max-age=0' -I -o header.pingo > /dev/null
+    echo "Usage: $0 [option]... {url}" >&2
+    echo
+    echo "Optional arguments:"
+    echo "   -h, --help                 Shows this help page"
+    echo "   -n, --name                 <worker_name> is used by the script"
+    echo "                                itselfs when working async"
+    echo "   -o, --option               Specifies which option should"
+    echo "                                be taken (starting at 1)"
+    echo "   -v, --votes                Specifies how many votes should"
+    echo "                                be send"
+    echo "   -w, --worker               Specifies the amound of workers"
+    echo
 
-    # Extracting the session cookie
-    SESSION_COOKIE="$(cat header.pingo | tr -d '\r' | sed -En 's/^Set-Cookie: (.*);.*;.*$/\1/p')"
-    SESSION_COOKIE="${SESSION_COOKIE}"
-
-    # Extracting the ETag
-    ETAG="$(cat header.pingo | tr -d '\r' | sed -En 's/^ETag: (.*)/\1/p')"
-    ETAG="${ETAG}"
-
-    # Removing tmp file
-    rm header.pingo
+    exit 0
 }
+
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+    key="$1"
+
+    case $key in
+        -h|--help)
+        print_help
+        exit 0
+        ;;
+        -n|--name)
+        NAME="$2"
+        shift 2
+        ;;
+        -o|--option)
+        OPTION="$2"
+        shift 2
+        ;;
+        -v|--votes)
+        VOTES="$2"
+        shift 2
+        ;;
+        -w|--worker)
+        WORKER="$2"
+        shift 2
+        ;;
+        *)    # unknown option
+        POSITIONAL+=("$1") # save it in an array for later
+        shift # past argument
+        ;;
+    esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
+URL=$1
+
+# Output colors
+BROWN='\033[0;33m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+RESET='\033[0m'
+
+## Config file
+## line#1 ~ id
+## line#2 ~ authenticity_token
+declare -a OPTIONS
+declare -a CONFIG
 
 ### Starting script
 echo "Getting survey from $URL."
