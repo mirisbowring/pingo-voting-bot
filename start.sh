@@ -88,7 +88,7 @@ echo()
 get_session_cookie()
 {
     # Getting the Header
-    curl -s 'https://pingo.coactum.de/707759' -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' -H 'Accept-Language: en-US,en;q=0.5' --compressed -H 'Referer: https://pingo.coactum.de/707759' -H 'Connection: keep-alive' -H 'Upgrade-Insecure-Requests: 1' -H 'Cache-Control: max-age=0' -I -o header.pingo > /dev/null
+    curl -s "$URL" -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' -H 'Accept-Language: en-US,en;q=0.5' --compressed -H 'Referer: https://pingo.coactum.de/707759' -H 'Connection: keep-alive' -H 'Upgrade-Insecure-Requests: 1' -H 'Cache-Control: max-age=0' -I -o header.pingo > /dev/null
 
     # Extracting the session cookie
     SESSION_COOKIE="$(cat header.pingo | tr -d '\r' | sed -En 's/^Set-Cookie: (.*);.*;.*$/\1/p')"
@@ -116,7 +116,7 @@ get_session_cookie()
 load_survey()
 {
     # Getting the survey page
-    curl -s 'https://pingo.coactum.de/707759' -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' -H 'Accept-Language: en-US,en;q=0.5' --compressed -H 'Referer: https://pingo.coactum.de/707759' -H 'Connection: keep-alive' -H "Cookie: $SESSION_COOKIE" -H 'Upgrade-Insecure-Requests: 1' -H "If-None-Match: $ETAG" -H 'Cache-Control: max-age=0' -o pingo.html.pingo > /dev/null
+    curl -s "$URL" -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' -H 'Accept-Language: en-US,en;q=0.5' --compressed -H 'Referer: https://pingo.coactum.de/707759' -H 'Connection: keep-alive' -H "Cookie: $SESSION_COOKIE" -H 'Upgrade-Insecure-Requests: 1' -H "If-None-Match: $ETAG" -H 'Cache-Control: max-age=0' -o pingo.html.pingo > /dev/null
     
     # Parse all information if the config array is empty (indicates that the
     # was not running before).
@@ -240,6 +240,8 @@ echo "Getting survey from $URL."
 
 ### Getting Session Cookie
 get_session_cookie
+echo $SESSION_COOKIE
+echo $ETAG
 
 ### Extracting survey details
 echo "Extracting options."
