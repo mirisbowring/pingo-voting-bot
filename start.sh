@@ -240,8 +240,6 @@ echo "Getting survey from $URL."
 
 ### Getting Session Cookie
 get_session_cookie
-echo $SESSION_COOKIE
-echo $ETAG
 
 ### Extracting survey details
 echo "Extracting options."
@@ -285,7 +283,7 @@ for run in $(seq $VOTES); do
 
     # Notify the user about the Progress (does not validate the success of the
     # vote)
-    echo "${GREEN}Voted $run has been placed.${RESET}" style
+    echo "${GREEN}Vote $run has been placed.${RESET}" style
 
     # Refresh the survey auth token if this is not the last round
     if [[ $run -ne $VOTES ]]; then
